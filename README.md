@@ -7,20 +7,33 @@ There are two kind of server methods: simple request response and stream.
 All numbers in little endian encoding.
 
 ### Request:
+```
 [method id: 4byte int]
 [size: 4byte int] // only content, without header
 [content type: 4byte int] // 1 - json, 2 - binary
 [content: [size]]
+```
 
 ### Simple response:
+```
 [size: 4byte int]
 [content type: 4byte int]
 [content: [size]]
+```
 
 ### Stream response:
-cycle of:
+```
 [size: 4byte int]
 [content: [size]]
+
+[size: 4byte int]
+[content: [size]]
+
+[size: 4byte int]
+[content: [size]]
+
+...
+```
 
 ## Server API:
 * Get records:
