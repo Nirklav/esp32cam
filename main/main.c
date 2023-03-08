@@ -25,9 +25,10 @@ static const char* TAG = "application";
 
 void files(int sock)
 {
-    uint8_t* buffer = calloc(1500, sizeof(uint8_t));
+    size_t buffer_len = 1500;
+    uint8_t* buffer = calloc(buffer_len, sizeof(uint8_t));
 
-    TcpServerData input = { 0, 0, buffer, sizeof(buffer) };
+    TcpServerData input = { 0, 0, buffer, buffer_len };
     if (tcp_server_read(sock, &input) && tcp_server_check_password(&input))
     {
         char* char_buffer = (char*)buffer;
@@ -48,7 +49,7 @@ void files(int sock)
 
         strcat(char_buffer, "]}");
 
-        TcpServerData output = { 1, strlen(char_buffer), buffer, sizeof(buffer) };
+        TcpServerData output = { 1, strlen(char_buffer), buffer, buffer_len };
         tcp_server_write(sock, &output);
     }
 
@@ -57,7 +58,7 @@ void files(int sock)
 
 void stream_file(int sock)
 {
-    uint8_t buffer[1024];
+    uint8_t buffer[128];
 
     TcpServerData input = { 0, 0, buffer, sizeof(buffer) };
     if (tcp_server_read(sock, &input))
@@ -89,15 +90,18 @@ void stream_file(int sock)
         if (!tcp_server_write_raw(sock, buffer, 4))
             return;
 
+        size_t file_buffer_len = 16384;
+        uint8_t* file_buffer = calloc(file_buffer_len, sizeof(uint8_t));
         while (true)
         {
-            size_t read = fread(buffer, sizeof(uint8_t), sizeof(buffer), file);
+            size_t read = fread(file_buffer, sizeof(uint8_t), file_buffer_len, file);
             if (read == 0)
                 break;
 
-            if (!tcp_server_write_raw(sock, buffer, read))
-                return;
+            if (!tcp_server_write_raw(sock, file_buffer, read))
+                break;
         }
+        free(file_buffer);
     }
 }
 
