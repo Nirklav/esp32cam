@@ -87,7 +87,8 @@ void stream_file(int sock)
             return;
 
         to_bytes(st.st_size, buffer, 0);
-        if (!tcp_server_write_raw(sock, buffer, 4))
+        to_bytes(CONTENT_TYPE_BIN, buffer, 4);
+        if (!tcp_server_write_raw(sock, buffer, 8))
             return;
 
         size_t file_buffer_len = 16384;
