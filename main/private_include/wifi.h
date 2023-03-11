@@ -1,3 +1,5 @@
 #pragma once
 
-void wifi_connect();
+#include <stdbool.h>
+
+bool wifi_connect();

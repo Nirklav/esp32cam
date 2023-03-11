@@ -273,11 +273,18 @@ void app_main()
 
     nvs_initialize();
     sdcard_mount();
-    wifi_connect();
+    
+    bool connected = wifi_connect();
+    if (!connected)
+    {
+        esp_restart();
+        return;
+    }
+
     time_setup();
 
-    esp_err_t r = camera_init();
-    if (r != ESP_OK)
+    esp_err_t initialized = camera_init();
+    if (initialized != ESP_OK)
     {
         esp_restart();
         return;
