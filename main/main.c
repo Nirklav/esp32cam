@@ -39,9 +39,12 @@ void files(int sock)
         {
             for (int i = 0; i < records->len; i++)
             {
+                if (i > 0)
+                    strcat(char_buffer, ",");
+
                 strcat(char_buffer, "\"");
                 strcat(char_buffer, records->array[i].name);
-                strcat(char_buffer, "\",");
+                strcat(char_buffer, "\"");
             }
             
             free(records);
@@ -68,6 +71,8 @@ void stream_file(int sock)
             return;
 
         char* file_name = cJSON_GetObjectItem(root, "file")->valuestring;
+        if (file_name == NULL)
+            return;
 
         char name[40];
         strcpy(name, RECORDS_PATH);
