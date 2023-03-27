@@ -4,6 +4,7 @@
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_task_wdt.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
@@ -98,22 +99,26 @@ static void tcp_server_call_method(const int sock, const TcpServer* server)
                 parameters[0] = (void*)&method;
                 parameters[1] = (void*)sock;
                 xTaskCreate(tcp_server_call_stream, "stream_method", 4096, parameters, 5, NULL);
+
+                // Don't close the socket
+                return;
             }
             else
             {
                 method.func(sock);
-
-                shutdown(sock, 0);
-                close(sock);
+                break;
             }
-
-            break;
         }
     }
+    
+    shutdown(sock, 0);
+    close(sock);
 }
 
 static void tcp_server_task(void *pvParameters)
 {
+    esp_task_wdt_add(NULL);
+
     char addr_str[128];
     TcpServer* server = (TcpServer*)pvParameters;
     int addr_family = AF_INET;
@@ -132,13 +137,22 @@ static void tcp_server_task(void *pvParameters)
     int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
     if (listen_sock < 0) {
         ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+        free(server);
         vTaskDelete(NULL);
         return;
     }
+
     int opt = 1;
     setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     ESP_LOGI(TAG, "Socket created");
+
+    int flags = fcntl(listen_sock, F_GETFL); 
+    if (fcntl(listen_sock, F_SETFL, flags | O_NONBLOCK) == -1) 
+    { 
+        ESP_LOGE(TAG, "Unable to set socket non blocking %d", errno);
+        goto CLEAN_UP;
+    }   
 
     int err = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
     if (err != 0) 
@@ -156,32 +170,43 @@ static void tcp_server_task(void *pvParameters)
         goto CLEAN_UP;
     }
 
+    struct pollfd pollfd;
+    pollfd.fd = listen_sock;
+    pollfd.events = POLLIN | POLLPRI;
+
     while (1) 
     {
-        ESP_LOGI(TAG, "Socket listening");
+        esp_task_wdt_reset();
 
-        struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
-        socklen_t addr_len = sizeof(source_addr);
-        int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
-        if (sock < 0) 
+        ESP_LOGI(TAG, "Polling socket...");
+
+        int r = poll(&pollfd, 1, 1000);
+        if (r > 0 && pollfd.revents & POLLIN)
         {
-            ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
-            break;
-        }
+            struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
+            socklen_t addr_len = sizeof(source_addr);
 
-        // Set tcp keepalive option
-        setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
-        setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
-        // Convert ip address to string
-        if (source_addr.ss_family == PF_INET) 
-        {
-            inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
-        }
-        ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
+            int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+            if (sock < 0) 
+            {
+                ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
+                continue;
+            }
 
-        tcp_server_call_method(sock, server);
+            // Set tcp keepalive option
+            setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
+            setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
+
+            // Convert ip address to string
+            if (source_addr.ss_family == PF_INET) 
+                inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
+
+            ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
+
+            tcp_server_call_method(sock, server);
+        }
     }
 
 CLEAN_UP:
