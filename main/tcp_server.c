@@ -272,6 +272,7 @@ cJSON* tcp_server_parse_and_check_password(TcpServerData* input)
     if (password == NULL || password->valuestring == NULL)
     {
         ESP_LOGE(TAG, "Invalid password: absent");
+        cJSON_Delete(root);
         return NULL;
     }
 
