@@ -240,7 +240,7 @@ static void write_next_file(int fps, int frames)
         avi_mjpeg_frame(&avi, listener.fb->buf, listener.fb->len, file);
         camera_return(&listener);
 
-        fflush(file);
+        // fsync(fileno(log_file));
         left--;
         if (left <= 0)
             break;

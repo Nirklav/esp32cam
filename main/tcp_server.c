@@ -178,8 +178,6 @@ static void tcp_server_task(void *pvParameters)
     {
         esp_task_wdt_reset();
 
-        ESP_LOGI(TAG, "Polling socket...");
-
         int r = poll(&pollfd, 1, 1000);
         if (r > 0 && pollfd.revents & POLLIN)
         {
