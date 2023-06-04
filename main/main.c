@@ -23,8 +23,13 @@
 static const char* TAG = "application";
 #define RECORDS_PATH MOUNT_POINT"/rec"
 
+static bool card_mounted = false;
+
 void files(int sock)
 {
+    if (!card_mounted)
+        return;
+
     size_t buffer_len = 1500;
     uint8_t* buffer = calloc(buffer_len, sizeof(uint8_t));
 
@@ -61,6 +66,9 @@ void files(int sock)
 
 void stream_file(int sock)
 {
+    if (!card_mounted)
+        return;
+
     uint8_t buffer[128];
 
     TcpServerData input = { 0, 0, buffer, sizeof(buffer) };
@@ -277,7 +285,8 @@ void app_main()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     nvs_initialize();
-    sdcard_mount();
+    sdmmc_card_t* card = sdcard_mount();
+    card_mounted = card != NULL;
     
     bool connected = wifi_connect();
     if (!connected)
@@ -296,6 +305,9 @@ void app_main()
     }
 
     tcp_server_start(tcp_server_create());
-    start_write_records();
+
+    if (card_mounted)
+        start_write_records();
+    
     camera_loop();
 }
