@@ -4,7 +4,7 @@
 * Using high resolution (with UXGA 1600x1200 ~10 fps)
 * Multistream on several devices
 * Write records on sd card
-* Attach it to Home Assistant (WIP)
+* Attach it to [Home Assistant](https://github.com/Nirklav/esp32cam_ha)
 
 ## How-to: build
 1. Install VS Code
