@@ -1,0 +1,3 @@
+[submodule "components/camera-component"]
+	path = components/camera-component
+	url = https://github.com/espressif/esp32-camera.git
