@@ -1,6 +1,10 @@
 # esp32cam
 
-Firmware for esp32cam that allows it to work as a Wi-Fi camera with recording on a SD card.
+Firmware for esp32cam that allows:
+* Using high resolution (with UXGA ~10 fps)
+* Multistream on several devices
+* Write records on sd card
+* Attach it to Home Assistant (<link to integration repo in progress>)
 
 ## Format:
 There are two kind of server methods: simple request response and stream.
