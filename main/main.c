@@ -19,6 +19,7 @@
 #include "private_include/avi.h"
 #include "private_include/time.h"
 #include "private_include/record.h"
+#include "private_include/flashlight.h"
 
 static const char* TAG = "application";
 #define RECORDS_PATH MOUNT_POINT"/rec"
@@ -161,9 +162,41 @@ void restart(int sock)
     }
 }
 
+void set_light(int sock)
+{
+    uint8_t buffer[128];
+    TcpServerData input = { 0, 0, buffer, sizeof(buffer) };
+
+    if (tcp_server_read(sock, &input))
+    {
+        cJSON* root = tcp_server_parse_and_check_password(&input);
+        if (root == NULL)
+            return;
+
+        cJSON* value = cJSON_GetObjectItem(root, "value");
+        if (value == NULL)
+            return;
+
+        bool enabled = value->valueint != 0;
+        flashlight_set(enabled);
+
+        cJSON_Delete(root);
+
+        if (enabled)
+            ESP_LOGI(TAG, "Flashlight enabled");
+        else
+            ESP_LOGI(TAG, "Flashlight disabled");
+
+        char* char_buffer = (char*)buffer;
+        strcpy(char_buffer, "{\"r\":\"OK\"}");
+        TcpServerData output = { 1, strlen(char_buffer), buffer, sizeof(buffer) };
+        tcp_server_write(sock, &output);
+    }
+}
+
 TcpServer* tcp_server_create()
 {
-    const int size = 4;
+    const int size = 5;
 
     TcpServer *tcp_server = malloc(sizeof (TcpServer));
 
@@ -171,12 +204,14 @@ TcpServer* tcp_server_create()
     TcpServerMethod stream_file_method = {1, true, &stream_file};
     TcpServerMethod stream_camera_method = {2, true, &stream_camera};
     TcpServerMethod restart_method = {3, false, &restart};
+    TcpServerMethod set_light_method = {4, false, &set_light};
 
     tcp_server->methods = calloc(size, sizeof(TcpServerMethod));
     tcp_server->methods[0] = files_method;
     tcp_server->methods[1] = stream_file_method;
     tcp_server->methods[2] = stream_camera_method;
     tcp_server->methods[3] = restart_method;
+    tcp_server->methods[4] = set_light_method;
     tcp_server->methods_len = size;
 
     return tcp_server;
@@ -296,6 +331,7 @@ void app_main()
     }
 
     time_setup();
+    flashlight_configure();
 
     esp_err_t initialized = camera_init();
     if (initialized != ESP_OK)
