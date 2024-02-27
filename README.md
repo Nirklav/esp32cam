@@ -14,5 +14,5 @@
 5. Open 'ESP-IDF SDK Configuration Editor'
    1. Set Wi-Fi password and ssid (You can search fields with 'wifi')
    2. Set Server password and port (You can search fields with 'server configuration')
-6. Connect you camera to computer
+6. Connect your camera to computer
 7. Click 'ESP-IDF Build, Flash and Monitor'
