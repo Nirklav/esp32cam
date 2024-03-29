@@ -45,7 +45,7 @@ void countdown_event_reset(CountdownEvent* event)
     xEventGroupClearBits(event->event, BIT_ZERO);
 }
 
-static void countdown_event_wait(CountdownEvent* event, uint bits, int* value, bool can_be_zero)
+static void countdown_event_wait(CountdownEvent* event, EventBits_t bits, int* value, bool can_be_zero)
 {
     while (true)
     {
