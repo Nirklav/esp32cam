@@ -6,6 +6,11 @@
 * Write records on sd card
 * Attach it to [Home Assistant](https://github.com/Nirklav/esp32cam_ha)
 
+## How-to: flash
+Repository contains already built binaries, you can falsh it with help of `espflash`.
+1. Install `espflash` [guide](https://docs.rs/espflash/latest/espflash/).
+2. Flash build/camera.elf with help of `espflash`.
+
 ## How-to: build
 1. Install VS Code
 2. Install ESP-IDF [guide](https://github.com/espressif/vscode-esp-idf-extension/blob/master/docs/tutorial/install.md)
